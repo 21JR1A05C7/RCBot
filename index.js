@@ -1,36 +1,43 @@
 require("dotenv").config();
-const TelegramBot = require("node-telegram-bot-api");
 const express = require("express");
 const axios = require("axios");
+const TelegramBot = require("node-telegram-bot-api");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.use(express.json());
 
-// Use the new token you generated from BotFather
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
+const bot = new TelegramBot(TELEGRAM_BOT_TOKEN);
 
-// Your chatbot's frontend URL
+// AI Chatbot URL (Modify this if needed)
 const CHATBOT_URL = "https://myaibot-ten.vercel.app";
 
-// Handle incoming messages
-bot.on("message", async (msg) => {
-    const chatId = msg.chat.id;
-    const userMessage = msg.text;
+// Handle incoming Telegram messages
+app.post("/webhook", async (req, res) => {
+    const message = req.body.message;
+    if (!message || !message.text) {
+        return res.sendStatus(200);
+    }
+
+    const chatId = message.chat.id;
+    const userMessage = message.text;
 
     try {
-        // Forward the message to your chatbot's API (Modify this if needed)
+        // Send the user message to your AI chatbot
         const response = await axios.get(`${CHATBOT_URL}/api/getResponse?message=${encodeURIComponent(userMessage)}`);
 
-        // Send the chatbot's response to the Telegram user
+        // Send chatbot response back to Telegram
         bot.sendMessage(chatId, response.data);
     } catch (error) {
         bot.sendMessage(chatId, "Sorry, I couldn't process your request. Please try again.");
-        console.error(error);
+        console.error("Error fetching chatbot response:", error);
     }
+
+    res.sendStatus(200);
 });
 
-// Start Express server (optional, useful for hosting)
+// Start Express server
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
